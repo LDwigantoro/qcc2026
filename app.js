@@ -10,14 +10,15 @@ const isAndroid = /Android/i.test(navigator.userAgent);
 const isMobile = isIOS || isAndroid;
 
 let isARSupported = false;
-let currentModel = 'tower4';
 
-// URL model 3D
+// PERBAIKAN: Default model & Path model disesuaikan dengan nama file Anda
+let currentModel = 'Retainning_Wall_1_Side_Corner_L';
 const modelUrls = {
-    'tower4': { glb: './assets/tower4.glb', usdz: './assets/tower4.usdz' },
-    'tower5': { glb: './assets/tower5.glb', usdz: './assets/tower5.usdz' },
-    'tower3': { glb: './assets/tower3.glb', usdz: './assets/tower3.usdz' }
+    'Retainning_Wall_1_Side_Corner_L': { glb: './assets/Retainning_Wall_1_Side_Corner_L.glb', usdz: './assets/Retainning_Wall_1_Side_Corner_L.usdz' },
+    'Retainning_Wall_1_Side_Middle': { glb: './assets/Retainning_Wall_1_Side_Middle.glb', usdz: './assets/Retainning_Wall_1_Side_Middle.usdz' },
+    'Retainning_Wall_1_Side_Corner_R': { glb: './assets/Retainning_Wall_1_Side_Corner_R.glb', usdz: './assets/Retainning_Wall_1_Side_Corner_R.usdz' }
 };
+
 let currentModelUrl = modelUrls[currentModel].glb;
 
 // -- INISIALISASI APLIKASI -- //
@@ -44,7 +45,7 @@ async function init() {
 
 // -- PENGATURAN EVENT LISTENER -- //
 function setupEventListeners() {
-    // Pemilihan tower
+    // Pemilihan model
     document.querySelectorAll('.tower-option').forEach(option => {
         option.addEventListener('click', handleSelection);
     });
@@ -60,12 +61,8 @@ function setupEventListeners() {
     window.addEventListener('resize', debounce(onWindowResize, 150));
 }
 
-
 // -- FUNGSI UTAMA -- //
 
-/**
- * Menangani pemilihan model tower oleh pengguna.
- */
 function handleSelection(e) {
     e.preventDefault();
     
@@ -73,7 +70,13 @@ function handleSelection(e) {
     if (!selectedModel) return;
 
     currentModel = selectedModel;
-    currentModelUrl = modelUrls[currentModel].glb;
+    
+    // PERBAIKAN: Ambil URL sesuai dengan data-model yang diklik
+    if(modelUrls[currentModel]) {
+        currentModelUrl = modelUrls[currentModel].glb;
+    } else {
+        currentModelUrl = `./assets/${currentModel}.glb`; // Fallback jika tidak ada di dict
+    }
     
     // Memberikan umpan balik visual saat item dipilih
     this.style.transform = 'scale(0.95)';
@@ -84,9 +87,6 @@ function handleSelection(e) {
     loadModelViewer();
 }
 
-/**
- * Memuat viewer berdasarkan jenis perangkat dan dukungan AR.
- */
 function loadModelViewer() {
     // Sembunyikan menu utama dan tampilkan halaman viewer
     document.getElementById('main-menu').classList.add('d-none');
@@ -97,21 +97,16 @@ function loadModelViewer() {
         const arQuickLookPage = document.getElementById('ar-quicklook');
         const modelLink = arQuickLookPage.querySelector(`a[href*="${currentModel}"]`);
         if (modelLink) {
-             // Secara otomatis "mengklik" link untuk membuka Quick Look
             modelLink.click();
         }
-        init3DFallback(); // Siapkan fallback jika Quick Look gagal atau ditutup
+        init3DFallback(); 
     } else if (isARSupported) {
         initWebXR();
     } else {
-        init3DFallback();
+        init3DFallback(); // Desktop akan masuk ke sini
     }
 }
 
-/**
- * Mengecek apakah sesi 'immersive-ar' didukung oleh browser.
- * @returns {Promise<boolean>}
- */
 async function checkARSupport() {
     if (!navigator.xr) return false;
     try {
@@ -122,9 +117,6 @@ async function checkARSupport() {
     }
 }
 
-/**
- * Inisialisasi sesi WebXR untuk pengalaman AR.
- */
 function initWebXR() {
     cleanupRenderers();
 
@@ -134,11 +126,11 @@ function initWebXR() {
     renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
     renderer.setPixelRatio(window.devicePixelRatio);
     renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.outputEncoding = THREE.sRGBEncoding; // PERBAIKAN: Penting untuk warna GLB
     renderer.xr.enabled = true;
     
     document.getElementById('viewer-page').appendChild(renderer.domElement);
 
-    // Tambahkan tombol AR
     const arButton = document.getElementById('ar-button');
     if(arButton) arButton.style.display = 'block';
 
@@ -149,92 +141,95 @@ function initWebXR() {
     };
     document.body.appendChild(ARButton.createButton(renderer, sessionInit));
 
-    // Atur controller untuk interaksi
     controller = renderer.xr.getController(0);
     controller.addEventListener('select', onSelect);
     scene.add(controller);
     
-    // Muat model 3D
     loadModel().then(gltf => {
         model = gltf.scene;
-        model.visible = false; // Sembunyikan model sampai ditempatkan
+        model.visible = false;
         scene.add(model);
     }).catch(init3DFallback);
 
     renderer.setAnimationLoop(() => renderer.render(scene, camera));
 }
 
-/**
- * Inisialisasi mode fallback 3D jika AR tidak tersedia.
- */
 function init3DFallback() {
     cleanupRenderers();
     
     const fallbackContainer = document.getElementById('fallback-container');
     fallbackContainer.style.display = 'block';
 
-    // Sembunyikan tombol AR jika ada
     const arButton = document.getElementById('ar-button');
     if(arButton) arButton.style.display = 'none';
     
-    showInfo("Mode 3D - Gunakan gestur untuk memutar model.");
+    showInfo("Memuat model 3D...");
 
     fallbackScene = new THREE.Scene();
-    fallbackScene.background = new THREE.Color(0xE0E0E0);
-    fallbackCamera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-    fallbackCamera.position.set(0, 1.5, 3);
+    fallbackScene.background = new THREE.Color(0xf8f9fa); // Mengikuti class bg-light bootstrap
+    fallbackCamera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 0.1, 1000);
+    fallbackCamera.position.set(0, 2, 5); // Posisi default kamera ditarik agak mundur agar terlihat full
 
     fallbackRenderer = new THREE.WebGLRenderer({ antialias: true });
     fallbackRenderer.setPixelRatio(window.devicePixelRatio);
     fallbackRenderer.setSize(window.innerWidth, window.innerHeight);
+    fallbackRenderer.outputEncoding = THREE.sRGBEncoding; // PERBAIKAN: Sangat vital agar warna GLB akurat
     fallbackContainer.appendChild(fallbackRenderer.domElement);
     
-    // Tambahkan pencahayaan
-    fallbackScene.add(new THREE.HemisphereLight(0xffffff, 0x444444, 1));
-    const directionalLight = new THREE.DirectionalLight(0xffffff, 1);
-    directionalLight.position.set(1, 1, 1);
-    fallbackScene.add(directionalLight);
+    // PERBAIKAN: Menambahkan lampu agar sisi kanan kiri terang
+    const ambientLight = new THREE.AmbientLight(0xffffff, 0.7);
+    fallbackScene.add(ambientLight);
+
+    const dirLight1 = new THREE.DirectionalLight(0xffffff, 0.8);
+    dirLight1.position.set(5, 10, 5);
+    fallbackScene.add(dirLight1);
+
+    const dirLight2 = new THREE.DirectionalLight(0xffffff, 0.5);
+    dirLight2.position.set(-5, 10, -5);
+    fallbackScene.add(dirLight2);
 
     // Kontrol orbit
-    const controls = new THREE.OrbitControls(fallbackCamera, fallbackRenderer.domElement);
+    controls = new THREE.OrbitControls(fallbackCamera, fallbackRenderer.domElement);
     controls.enableDamping = true;
-    controls.minDistance = 2;
-    controls.maxDistance = 10;
-    controls.target.set(0, 1, 0);
+    controls.minDistance = 1;
+    controls.maxDistance = 20;
+    controls.target.set(0, 1, 0); // Focus kamera ke tengah (Y=1)
     
     // Muat model
     loadModel().then(gltf => {
         model = gltf.scene;
         fallbackScene.add(model);
+        showInfo("Mode 3D - Gunakan mouse untuk memutar.");
     });
 
     // Loop animasi
     const animateFallback = () => {
-    if (!fallbackRenderer) return; // Exit if renderer doesn't exist
-    
-    requestAnimationFrame(animateFallback);
-    if (controls) controls.update();
-    if (fallbackRenderer && fallbackScene && fallbackCamera) {
-        fallbackRenderer.render(fallbackScene, fallbackCamera);
-    }
-};
+        if (!fallbackRenderer) return; 
+        
+        requestAnimationFrame(animateFallback);
+        if (controls) controls.update();
+        if (fallbackRenderer && fallbackScene && fallbackCamera) {
+            fallbackRenderer.render(fallbackScene, fallbackCamera);
+        }
+    };
     animateFallback();
 }
 
-/**
- * Memuat model GLB menggunakan GLTFLoader.
- * @returns {Promise<Object>}
- */
 function loadModel() {
     return new Promise((resolve, reject) => {
         const loader = new THREE.GLTFLoader();
         loader.load(currentModelUrl, 
             gltf => {
                 console.log("Model berhasil dimuat:", currentModel);
-                // Atur skala dan posisi model
+                
+                // Atur skala dan pusatkan posisi model
                 const box = new THREE.Box3().setFromObject(gltf.scene);
                 const center = box.getCenter(new THREE.Vector3());
-                gltf.scene.position.sub(center); // Pusatkan model
+                gltf.scene.position.sub(center); 
+                
+                // Tambahkan sedikit offset Y agar model menapak di dasar dengan pas (jika diinginkan)
+                gltf.scene.position.y += (box.max.y - box.min.y) / 2;
+
                 resolve(gltf);
             }, 
             undefined, 
@@ -247,31 +242,21 @@ function loadModel() {
     });
 }
 
-/**
- * Menempatkan model di dunia AR saat pengguna mengetuk layar.
- */
 function onSelect() {
     if (model) {
-        // Logika penempatan model (sesuaikan jika perlu)
-        const hitTestSource = null; // Ini perlu diimplementasikan dengan hit-test
+        const hitTestSource = null;
         if (hitTestSource) {
-            // Implementasi penempatan berdasarkan hit-test
         } else {
-            // Penempatan sederhana di depan kamera
             model.position.set(0, 0, -2).applyMatrix4(controller.matrixWorld);
             model.quaternion.setFromRotationMatrix(controller.matrixWorld);
         }
         model.visible = true;
-        showInfo("Menara ditempatkan. Anda bisa bergerak di sekitarnya.");
+        showInfo("Objek ditempatkan. Anda bisa bergerak di sekitarnya.");
     }
 }
 
-
 // -- FUNGSI UTILITAS -- //
 
-/**
- * Menyesuaikan ukuran renderer saat jendela diubah ukurannya.
- */
 function onWindowResize() {
     const width = window.innerWidth;
     const height = window.innerHeight;
@@ -289,22 +274,19 @@ function onWindowResize() {
     }
 }
 
-/**
- * Menampilkan pesan informasi sementara kepada pengguna.
- * @param {string} message - Pesan yang akan ditampilkan.
- */
 function showInfo(message) {
     const infoBox = document.getElementById('info-box');
     infoBox.textContent = message;
     infoBox.style.display = 'block';
-    setTimeout(() => {
-        infoBox.style.display = 'none';
-    }, 4000);
+    
+    // Jangan sembunyikan jika pesannya adalah "Memuat model..."
+    if(message !== "Memuat model...") {
+        setTimeout(() => {
+            infoBox.style.display = 'none';
+        }, 4000);
+    }
 }
 
-/**
- * Kembali ke menu utama dan membersihkan scene.
- */
 function showMainMenu() {
     document.getElementById('viewer-page').classList.add('d-none');
     document.getElementById('main-menu').classList.remove('d-none');
@@ -317,9 +299,6 @@ function showMainMenu() {
     cleanupRenderers();
 }
 
-/**
- * Membersihkan renderer dan DOM elemen terkait.
- */
 function cleanupRenderers() {
     if (renderer) {
         renderer.dispose();
@@ -330,7 +309,6 @@ function cleanupRenderers() {
     }
     
     if (fallbackRenderer) {
-        // Clean up controls first if they exist
         if (controls) {
             controls.dispose();
             controls = null;
@@ -343,7 +321,6 @@ function cleanupRenderers() {
         fallbackRenderer = null;
     }
     
-    // Also clean up other resources
     if (scene) scene = null;
     if (camera) camera = null;
     if (fallbackScene) fallbackScene = null;
@@ -351,12 +328,6 @@ function cleanupRenderers() {
     if (model) model = null;
 }
 
-/**
- * Fungsi debounce untuk menunda eksekusi fungsi.
- * @param {Function} func - Fungsi yang akan di-debounce.
- * @param {number} wait - Waktu tunda dalam milidetik.
- * @returns {Function}
- */
 function debounce(func, wait) {
     let timeout;
     return function(...args) {

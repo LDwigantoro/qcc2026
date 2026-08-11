@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Survey Desain Tower Telekomunikasi Untuk Rooftop</title>
+    <title>QCC PDS 2025</title>
     <style>
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
@@ -43,6 +43,7 @@
         input[type="text"],
         input[type="email"],
         input[type="number"],
+        input[type="file"],
         textarea,
         select {
             width: 100%;
@@ -89,152 +90,549 @@
             margin-top: -10px;
             margin-bottom: 15px;
         }
+        /* PDF Preview Styles */
+        .pdf-preview-container {
+            display: none;
+            margin-top: 30px;
+            background-color: white;
+            padding: 25px;
+            border-radius: 8px;
+            box-shadow: 0 0 15px rgba(0, 0, 0, 0.1);
+        }
+        .pdf-preview {
+            width: 100%;
+            height: 500px;
+            border: 1px solid #ddd;
+            margin-bottom: 20px;
+        }
+        .preview-buttons {
+            display: flex;
+            justify-content: space-between;
+        }
+        .preview-btn {
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        .edit-btn {
+            background-color: #f39c12;
+            color: white;
+            border: none;
+        }
+        .download-btn {
+            background-color: #27ae60;
+            color: white;
+            border: none;
+        }
+        .send-btn {
+            background-color: #3498db;
+            color: white;
+            border: none;
+        }
+        .unit {
+            font-size: 14px;
+            color: #7f8c8d;
+            margin-left: 5px;
+        }
+        /* Tower Recommendation Styles */
+        .tower-recommendation {
+            margin-top: 30px;
+            padding: 20px;
+            background-color: #e8f4fc;
+            border-left: 4px solid #3498db;
+            border-radius: 5px;
+        }
+        .tower-recommendation h3 {
+            color: #2c3e50;
+            margin-top: 0;
+        }
+        .tower-recommendation p {
+            margin-bottom: 5px;
+        }
+        .highlight {
+            font-weight: bold;
+            color: #e74c3c;
+        }
     </style>
+    <!-- Include jsPDF library -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
 </head>
 <body>
-    <h1>Survey Desain Tower Telekomunikasi</h1>
+    <h1>Survey Desain Retaining Wall</h1>
     
     <form class="survey-form" id="surveyForm">
         <div class="form-group">
-            <label for="responden">Nama Responden <span class="required">*</span></label>
+            <label for="responden">Nama<span class="required">*</span></label>
             <input type="text" id="responden" name="responden" required>
         </div>
         
         <div class="form-group">
-            <label for="email">Email <span class="required">*</span></label>
-            <input type="email" id="email" name="email" required>
+            <label for="nik">NIK <span class="required">*</span></label>
+            <input type="text" id="nik" name="nik" title="Masukkan NIK Anda" maxlength="16" required>
         </div>
         
         <div class="form-group">
-            <label for="perusahaan">Nama Perusahaan/Operator <span class="required">*</span></label>
-            <input type="text" id="perusahaan" name="perusahaan" required>
-        </div>
-        
-        <div class="form-group">
-            <label>1. Apakah bangunan sudah memiliki blueprint/gambar teknik yang menunjukkan detail tulangan? <span class="required">*</span></label>
+            <label>1. Apakah bangunan memiliki blueprint atau APD? <span class="required">*</span></label>
+            <p class="form-note">Mengetahui struktur tulangan</p>
             <div class="radio-group">
-                <label><input type="radio" name="blueprint" value="Ya" required> Ya</label>
-                <label><input type="radio" name="blueprint" value="Tidak"> Tidak</label>
-                <label><input type="radio" name="blueprint" value="Sebagian"> Sebagian</label>
+                <label><input type="radio" name="hasBlueprint" value="Ya" required onchange="toggleBlueprintUpload(this.value)"> Ya</label>
+                <label><input type="radio" name="hasBlueprint" value="Tidak" onchange="toggleBlueprintUpload(this.value)"> Tidak</label>
             </div>
-            <label for="blueprint_note" class="form-note">Jika ada, mohon diupload/dikirimkan secara terpisah</label>
+            
+            <div id="blueprintUploadSection" style="display:none; margin-top: 15px;">
+                <label for="blueprint_upload">Silakan unggah blueprint</label>
+                <input type="file" id="blueprint_upload" name="blueprint_upload" accept="image/*,.pdf,.zip">
+            </div>
         </div>
         
         <div class="form-group">
-            <label>2. Bagaimana bentuk bangunan jika dilihat dari jauh? <span class="required">*</span></label>
+            <label for="foto_bangunan">2. Bentuk bangunan tampak jauh<span class="required">*</span></label>
+            <input type="file" id="foto_bangunan" name="foto_bangunan" accept="image/*" required>
+        </div>
+        
+        <div class="form-group">
+            <label for="ketinggian_operator">3. Ketinggian yang diinginkan operator (meter)<span class="required">*</span></label>
+            <input type="number" id="ketinggian_operator" name="ketinggian_operator" min="5" max="200" required>
+        </div>
+        
+        <div class="form-group">
+            <label for="ketinggian_rooftop">4. Ketinggian rooftop (meter) <span class="required">*</span></label>
+            <input type="number" id="ketinggian_rooftop" name="ketinggian_rooftop" required>
+        </div>
+        
+        <div class="form-group">
+            <label>5. Source power<span class="required">*</span></label>
             <div class="radio-group">
-                <label><input type="radio" name="bentuk_bangunan" value="Slender" required> Slender (ramping)</label>
-                <label><input type="radio" name="bentuk_bangunan" value="Bulkier"> Bulkier (besar/massif)</label>
-                <label><input type="radio" name="bentuk_bangunan" value="Unik"> Bentuk unik/khusus</label>
+                <label><input type="radio" name="source_power" value="Gedung" required> Gedung</label>
+                <label><input type="radio" name="source_power" value="PLN"> PLN</label>
             </div>
-            <textarea name="bentuk_bangunan_detail" placeholder="Deskripsi tambahan tentang bentuk bangunan..."></textarea>
         </div>
         
         <div class="form-group">
-            <label for="ketinggian">3. Ketinggian rooftop yang diinginkan (dalam meter) <span class="required">*</span></label>
-            <input type="number" id="ketinggian" name="ketinggian" min="5" max="200" required>
-            <label for="ketinggian_note" class="form-note">Mohon sesuaikan dengan kebutuhan operator</label>
+            <label for="ukuran_kolom">6. Ukuran Kolom <span class="required">*</span><span class="unit">(centimeter)</span></label>
+            <input type="text" id="ukuran_kolom" name="ukuran_kolom" placeholder="Contoh: 60x60" required>
         </div>
         
         <div class="form-group">
-            <label for="ukuran_kolom">4. Ukuran kolom yang direncanakan <span class="required">*</span></label>
-            <input type="text" id="ukuran_kolom" name="ukuran_kolom" placeholder="Contoh: 40x40 cm" required>
+            <label for="ukuran_balok">7. Ukuran Balok <span class="required">*</span><span class="unit">(centimeter)</span></label>
+            <input type="text" id="ukuran_balok" name="ukuran_balok" placeholder="Contoh: 40x50" required>
         </div>
         
         <div class="form-group">
-            <label for="susunan_kolom">5. Susunan kolom dan jarak antar kolom <span class="required">*</span></label>
-            <textarea id="susunan_kolom" name="susunan_kolom" required placeholder="Deskripsi susunan kolom dan jarak antar kolom..."></textarea>
+            <label for="jarak_kolom">8. Jarak antar kolom <span class="required">*</span><span class="unit">(centimeter)</span></label>
+            <input type="text" id="jarak_kolom" name="jarak_kolom" placeholder="Contoh: 400" required>
         </div>
-        
+
         <div class="form-group">
-            <label>6. Bentuk pondasi yang direncanakan <span class="required">*</span></label>
+            <label>9. Space untuk penempatan perangkat <span class="required">*</span></label>
+            <p class="form-note">Unggah foto dan masukkan ukuran space yang tersedia.</p>
+            <label for="space_foto">Foto Space Perangkat</label>
+            <input type="file" id="space_foto" name="space_foto" accept="image/*" required>
+            <label for="space_ukuran" style="margin-top:10px;">Ukuran Space (P x L)</label>
+            <input type="text" id="space_ukuran" name="space_ukuran" placeholder="Contoh: 2m x 3m" required>
+        </div>
+
+        <div class="form-group">
+            <label for="utilitas">10. Utilitas <span class="required">*</span></label>
+            <p class="form-note">Contoh: jangan sampe bangun pole dekat dengan JTM listrik.</p>
+            <textarea id="utilitas" name="utilitas" required placeholder="Jelaskan utilitas yang ada di sekitar (JTM Listrik, pipa, dll)..."></textarea>
+        </div>
+
+        <div class="form-group">
+            <label>11. Apakah ada potensi collo? <span class="required">*</span></label>
             <div class="radio-group">
-                <label><input type="radio" name="pondasi" value="Tapak" required> Tapak</label>
-                <label><input type="radio" name="pondasi" value="Sumuran"> Sumuran</label>
-                <label><input type="radio" name="pondasi" value="Pancang"> Pancang</label>
-                <label><input type="radio" name="pondasi" value="Lainnya"> Lainnya</label>
+                <label><input type="radio" name="potensi_collo" value="Short term" required> Short term</label>
+                <label><input type="radio" name="potensi_collo" value="Mid term"> Mid term</label>
+                <label><input type="radio" name="potensi_collo" value="Long term"> Long term</label>
+                <label><input type="radio" name="potensi_collo" value="Tidak ada"> Tidak ada</label>
             </div>
-            <textarea name="pondasi_detail" placeholder="Deskripsi detail pondasi..."></textarea>
         </div>
         
         <div class="form-group">
-            <label for="space_perangkat">7. Kebutuhan space untuk penempatan perangkat <span class="required">*</span></label>
-            <textarea id="space_perangkat" name="space_perangkat" required placeholder="Deskripsi kebutuhan ruang untuk perangkat..."></textarea>
-        </div>
-        
-        <div class="form-group">
-            <label>8. Apakah ada utilitas sekitar (JTM listrik, pipa gas, dll) yang perlu dipertimbangkan? <span class="required">*</span></label>
-            <div class="radio-group">
-                <label><input type="radio" name="utilitas" value="Ya" required> Ya</label>
-                <label><input type="radio" name="utilitas" value="Tidak"> Tidak</label>
-                <label><input type="radio" name="utilitas" value="Tidak tahu"> Tidak tahu</label>
-            </div>
-            <textarea name="utilitas_detail" placeholder="Deskripsi utilitas sekitar yang perlu dihindari..."></textarea>
-        </div>
-        
-        <div class="form-group">
-            <label for="catatan_tambahan">Catatan Tambahan</label>
+            <label for="catatan_tambahan">12. Catatan Tambahan</label>
             <textarea id="catatan_tambahan" name="catatan_tambahan" placeholder="Masukkan catatan tambahan atau pertanyaan khusus..."></textarea>
         </div>
         
-        <button type="submit" class="submit-btn">Kirim Survey</button>
+        <button type="submit" class="submit-btn">Generate PDF Preview</button>
     </form>
 
+    <!-- Tower Recommendation Section -->
+    <div id="towerRecommendation" class="tower-recommendation" style="display: none;">
+        <h3>Rekomendasi Jenis Tower</h3>
+        <p><strong>Berdasarkan input survey:</strong></p>
+        <p>Potensi Collo: <span id="displayPotensiCollo"></span></p>
+        <p>Tinggi yang diminta operator: <span id="displayTinggiOperator"></span> meter</p>
+        <p>Tinggi rooftop: <span id="displayTinggiRooftop"></span> meter</p>
+        <p><strong>Rekomendasi:</strong> <span id="towerType" class="highlight"></span></p>
+        <p id="towerDetails"></p>
+    </div>
+
+    <!-- PDF Preview Section -->
+    <div id="pdfPreviewContainer" class="pdf-preview-container">
+        <h2>Preview Dokumen Survey</h2>
+        <iframe id="pdfPreview" class="pdf-preview" frameborder="0"></iframe>
+        <div class="preview-buttons">
+            <button id="editBtn" class="preview-btn edit-btn">Edit Survey</button>
+            <button id="downloadBtn" class="preview-btn download-btn">Download PDF</button>
+            <button id="sendBtn" class="preview-btn send-btn">Kirim via Email</button>
+        </div>
+    </div>
+
     <script>
-        document.getElementById('surveyForm').addEventListener('submit', function(e) {
+        // Initialize jsPDF
+        const { jsPDF } = window.jspdf;
+        
+        // Store image data
+        let imageData = {
+            foto_bangunan: null,
+            space_foto: null,
+            blueprint_upload: null
+        };
+        
+        function toggleBlueprintUpload(value) {
+            const uploadSection = document.getElementById('blueprintUploadSection');
+            const fileInput = document.getElementById('blueprint_upload');
+            if (value === 'Ya') {
+                uploadSection.style.display = 'block';
+                fileInput.required = true;
+            } else {
+                uploadSection.style.display = 'none';
+                fileInput.required = false;
+            }
+        }
+
+        document.getElementById('surveyForm').addEventListener('submit', async function(e) {
             e.preventDefault();
             
-            // Kumpulkan data form
+            // Load images first
+            await loadAllImages();
+            
+            // Collect form data
             const formData = new FormData(this);
             const data = {};
             formData.forEach((value, key) => {
-                data[key] = value;
+                if (value instanceof File) {
+                    data[key] = value.name || 'Tidak ada file dipilih';
+                } else {
+                    data[key] = value;
+                }
             });
             
-            // Format data untuk email
+            // Calculate and display tower recommendation
+            calculateTowerType(data);
+            
+            // Generate PDF
+            generatePDF(data);
+            
+            // Show preview section
+            document.getElementById('pdfPreviewContainer').style.display = 'block';
+            
+            // Scroll to preview
+            document.getElementById('pdfPreviewContainer').scrollIntoView({ behavior: 'smooth' });
+        });
+        
+        async function loadAllImages() {
+            // Reset image data
+            imageData = {
+                foto_bangunan: null,
+                space_foto: null,
+                blueprint_upload: null
+            };
+            
+            // Load building photo
+            const buildingPhoto = document.getElementById('foto_bangunan').files[0];
+            if (buildingPhoto) {
+                imageData.foto_bangunan = await getImageData(buildingPhoto);
+            }
+            
+            // Load space photo
+            const spacePhoto = document.getElementById('space_foto').files[0];
+            if (spacePhoto) {
+                imageData.space_foto = await getImageData(spacePhoto);
+            }
+            
+            // Load blueprint if exists
+            const blueprint = document.getElementById('blueprint_upload').files[0];
+            if (blueprint) {
+                imageData.blueprint_upload = await getImageData(blueprint);
+            }
+        }
+        
+        function getImageData(file) {
+            return new Promise((resolve) => {
+                if (!file) {
+                    resolve(null);
+                    return;
+                }
+                
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    resolve(e.target.result);
+                };
+                reader.readAsDataURL(file);
+            });
+        }
+        
+        function calculateTowerType(data) {
+            const potensiCollo = data.potensi_collo;
+            const tinggiOperator = parseInt(data.ketinggian_operator) || 0;
+            const tinggiRooftop = parseInt(data.ketinggian_rooftop) || 0;
+            const selisihTinggi = tinggiOperator - tinggiRooftop;
+            
+            // Display the input values
+            document.getElementById('displayPotensiCollo').textContent = potensiCollo;
+            document.getElementById('displayTinggiOperator').textContent = tinggiOperator;
+            document.getElementById('displayTinggiRooftop').textContent = tinggiRooftop;
+            
+            let towerType = '';
+            let towerDetails = '';
+            
+            if (potensiCollo === 'Tidak ada') {
+                // No collo potential - use pole
+                towerType = 'Pole';
+                
+                if (selisihTinggi <= 6) {
+                    towerDetails = 'Pole 6 meter';
+                } else if (selisihTinggi <= 9) {
+                    towerDetails = 'Pole 9 meter';
+                } else if (selisihTinggi <= 12) {
+                    towerDetails = 'Pole 12 meter';
+                } else {
+                    towerDetails = 'Pole 12 meter dengan peninggian ' + (selisihTinggi - 12) + ' meter';
+                }
+            } else {
+                // Has collo potential - use tower
+                if (selisihTinggi < 20) {
+                    towerType = 'Mini Tower';
+                    towerDetails = 'Mini Tower 20 meter (tinggi minimum)';
+                } else {
+                    towerType = 'Tower Three Legs';
+                    towerDetails = 'Tower Three Legs ' + selisihTinggi + ' meter';
+                }
+            }
+            
+            document.getElementById('towerType').textContent = towerType;
+            document.getElementById('towerDetails').textContent = towerDetails;
+            document.getElementById('towerRecommendation').style.display = 'block';
+            
+            return {
+                type: towerType,
+                details: towerDetails,
+                heightDifference: selisihTinggi
+            };
+        }
+
+        function generatePDF(data) {
+            // Calculate tower type first
+            const towerRecommendation = calculateTowerType(data);
+            
+            const doc = new jsPDF();
+            
+            // Add logo or header
+            doc.setFontSize(18);
+            doc.setTextColor(40, 60, 80); // Dark blue color
+            doc.text('SURVEY DESAIN TOWER ROOFTOP', 105, 20, { align: 'center' });
+            
+            doc.setFontSize(12);
+            doc.setTextColor(100, 100, 100);
+            doc.text('QCC PDS 2025', 105, 28, { align: 'center' });
+            
+            // Add line separator
+            doc.setDrawColor(52, 152, 219); // Blue color
+            doc.setLineWidth(0.5);
+            doc.line(20, 35, 190, 35);
+            
+            // Add respondent info
+            doc.setFontSize(14);
+            doc.setTextColor(40, 60, 80);
+            doc.text('Informasi Responden', 20, 45);
+            
+            doc.setFontSize(12);
+            doc.setTextColor(0, 0, 0);
+            doc.text(`Nama: ${data.responden || 'Tidak diisi'}`, 20, 55);
+            doc.text(`NIK: ${data.nik || 'Tidak diisi'}`, 20, 65);
+            
+            // Add survey questions
+            doc.setFontSize(14);
+            doc.setTextColor(40, 60, 80);
+            doc.text('Hasil Survey', 20, 80);
+            
+            // Create table data
+            const surveyData = [
+                ['1. Blueprint/APD', data.hasBlueprint === 'Ya' ? 'Ya' : 'Tidak'],
+                ['2. Foto Bangunan', data.foto_bangunan || 'Tidak diisi'],
+                ['3. Ketinggian Operator', `${data.ketinggian_operator || 'Tidak diisi'} meter`],
+                ['4. Ketinggian Rooftop', `${data.ketinggian_rooftop || 'Tidak diisi'} meter`],
+                ['5. Source Power', data.source_power || 'Tidak diisi'],
+                ['6. Ukuran Kolom', `${data.ukuran_kolom || 'Tidak diisi'} cm`],
+                ['7. Ukuran Balok', `${data.ukuran_balok || 'Tidak diisi'} cm`],
+                ['8. Jarak Antar Kolom', `${data.jarak_kolom || 'Tidak diisi'} cm`],
+                ['9. Space Perangkat', data.space_ukuran || 'Tidak diisi'],
+                ['10. Utilitas', data.utilitas || 'Tidak diisi'],
+                ['11. Potensi Collo', data.potensi_collo || 'Tidak diisi'],
+                ['12. Catatan Tambahan', data.catatan_tambahan || 'Tidak ada']
+            ];
+            
+            // Add table
+            doc.autoTable({
+                startY: 85,
+                head: [['Pertanyaan', 'Jawaban']],
+                body: surveyData,
+                theme: 'grid',
+                headStyles: {
+                    fillColor: [52, 152, 219], // Blue header
+                    textColor: 255 // White text
+                },
+                alternateRowStyles: {
+                    fillColor: [240, 240, 240] // Light gray alternate rows
+                },
+                margin: { left: 20 },
+                didDrawPage: function(data) {
+                    // Footer
+                    doc.setFontSize(10);
+                    doc.setTextColor(100, 100, 100);
+                    doc.text('* File pendukung terlampir pada halaman berikutnya', 20, doc.internal.pageSize.height - 10);
+                }
+            });
+            
+            // Add tower recommendation
+            doc.setFontSize(14);
+            doc.setTextColor(40, 60, 80);
+            doc.text('Rekomendasi Jenis Tower', 20, doc.lastAutoTable.finalY + 20);
+            
+            doc.setFontSize(12);
+            doc.setTextColor(0, 0, 0);
+            doc.text(`Potensi Collo: ${data.potensi_collo || 'Tidak diisi'}`, 20, doc.lastAutoTable.finalY + 30);
+            doc.text(`Tinggi Operator: ${data.ketinggian_operator || 'Tidak diisi'} meter`, 20, doc.lastAutoTable.finalY + 40);
+            doc.text(`Tinggi Rooftop: ${data.ketinggian_rooftop || 'Tidak diisi'} meter`, 20, doc.lastAutoTable.finalY + 50);
+            doc.text(`Selisih Tinggi: ${towerRecommendation.heightDifference || '0'} meter`, 20, doc.lastAutoTable.finalY + 60);
+            
+            doc.setFontSize(14);
+            doc.setTextColor(40, 60, 80);
+            doc.text(`Rekomendasi: ${towerRecommendation.type}`, 20, doc.lastAutoTable.finalY + 75);
+            doc.setFontSize(12);
+            doc.text(towerRecommendation.details, 20, doc.lastAutoTable.finalY + 85);
+            
+            // Add images on separate pages
+            if (imageData.foto_bangunan) {
+                doc.addPage();
+                doc.setFontSize(14);
+                doc.text('Lampiran Foto Bangunan', 20, 20);
+                try {
+                    doc.addImage(imageData.foto_bangunan, 'JPEG', 20, 30, 170, 120);
+                } catch (e) {
+                    console.error('Error adding building photo:', e);
+                    doc.text('Gagal menampilkan foto bangunan', 20, 40);
+                }
+            }
+            
+            if (imageData.space_foto) {
+                doc.addPage();
+                doc.setFontSize(14);
+                doc.text('Lampiran Foto Space Perangkat', 20, 20);
+                try {
+                    doc.addImage(imageData.space_foto, 'JPEG', 20, 30, 170, 120);
+                } catch (e) {
+                    console.error('Error adding space photo:', e);
+                    doc.text('Gagal menampilkan foto space perangkat', 20, 40);
+                }
+            }
+            
+            if (data.hasBlueprint === 'Ya' && imageData.blueprint_upload) {
+                doc.addPage();
+                doc.setFontSize(14);
+                doc.text('Lampiran Blueprint/APD', 20, 20);
+                try {
+                    doc.addImage(imageData.blueprint_upload, 'JPEG', 20, 30, 170, 120);
+                } catch (e) {
+                    console.error('Error adding blueprint:', e);
+                    doc.text('Gagal menampilkan blueprint', 20, 40);
+                }
+            }
+            
+            // Save PDF to preview
+            const pdfOutput = doc.output('datauristring');
+            document.getElementById('pdfPreview').src = pdfOutput;
+            
+            // Set up download button
+            document.getElementById('downloadBtn').onclick = function() {
+                doc.save(`Survey Tower - ${data.responden || 'Anonim'}.pdf`);
+            };
+            
+            // Set up email button
+            document.getElementById('sendBtn').onclick = function() {
+                sendEmail(data, towerRecommendation);
+            };
+            
+            // Set up edit button
+            document.getElementById('editBtn').onclick = function() {
+                document.getElementById('pdfPreviewContainer').style.display = 'none';
+                document.getElementById('towerRecommendation').style.display = 'none';
+            };
+        }
+        
+        function sendEmail(data, towerRecommendation) {
+            let blueprintInfo;
+            if (data.hasBlueprint === 'Ya') {
+                blueprintInfo = `1. Apakah ada blueprint/gambar teknik?: Ya
+                   File Blueprint/Gartek: ${data.blueprint_upload} (File dilampirkan terpisah)`;
+            } else {
+                blueprintInfo = `1. Apakah ada blueprint/gambar teknik?: Tidak`;
+            }
+            
             const emailBody = `
                 Survey Desain Tower Telekomunikasi
                 ================================
                 
                 Nama Responden: ${data.responden}
-                Email: ${data.email}
-                Perusahaan/Operator: ${data.perusahaan}
+                NIK: ${data.nik}
                 
-                1. Blueprint/Gambar Teknik: ${data.blueprint}
+                ${blueprintInfo}
                 
-                2. Bentuk Bangunan: ${data.bentuk_bangunan}
-                Detail: ${data.bentuk_bangunan_detail || 'Tidak ada'}
+                2. Foto Bangunan Tampak Jauh: ${data.foto_bangunan || 'Tidak diisi'}
+                   (File dilampirkan terpisah)
                 
-                3. Ketinggian Rooftop: ${data.ketinggian} meter
+                3. Ketinggian yang diinginkan operator: ${data.ketinggian_operator || 'Tidak diisi'} meter
                 
-                4. Ukuran Kolom: ${data.ukuran_kolom}
+                4. Ketinggian rooftop: ${data.ketinggian_rooftop || 'Tidak diisi'} meter
                 
-                5. Susunan Kolom:
-                ${data.susunan_kolom}
+                5. Source power: ${data.source_power || 'Tidak diisi'}
                 
-                6. Bentuk Pondasi: ${data.pondasi}
-                Detail: ${data.pondasi_detail || 'Tidak ada'}
+                6. Ukuran Kolom: ${data.ukuran_kolom || 'Tidak diisi'} cm
                 
-                7. Space Perangkat:
-                ${data.space_perangkat}
+                7. Ukuran Balok: ${data.ukuran_balok || 'Tidak diisi'} cm
                 
-                8. Utilitas Sekitar: ${data.utilitas}
-                Detail: ${data.utilitas_detail || 'Tidak ada'}
+                8. Jarak antar kolom: ${data.jarak_kolom || 'Tidak diisi'} cm
+
+                9. Space untuk penempatan perangkat:
+                   Ukuran: ${data.space_ukuran || 'Tidak diisi'}
+                   Foto Space: ${data.space_foto || 'Tidak ada file dipilih'} (File dilampirkan terpisah)
+
+                10. Utilitas:
+                    ${data.utilitas || 'Tidak diisi'}
+
+                11. Potensi Collo: ${data.potensi_collo || 'Tidak diisi'}
                 
-                Catatan Tambahan:
+                Rekomendasi Jenis Tower:
+                - Jenis: ${towerRecommendation.type}
+                - Detail: ${towerRecommendation.details}
+                
+                12. Catatan Tambahan:
                 ${data.catatan_tambahan || 'Tidak ada'}
+
+                ================================
+                MOHON LAMPIRKAN FILE blueprint, foto bangunan, dan foto space perangkat pada email ini sebelum mengirim (jika ada).
             `;
             
-            // Kirim email (ini akan membuka client email default)
-            const subject = `Survey Tower Telekomunikasi - ${data.perusahaan}`;
+            const subject = `Survey Tower Telekomunikasi - ${data.responden}`;
             const mailtoLink = `mailto:dwigantoro.public@gmail.com?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(emailBody)}`;
             
             window.location.href = mailtoLink;
-        
             
-            // Tampilkan konfirmasi
-            alert('Terima kasih! Survey akan dikirim via email. Silakan lengkapi pengiriman email di client email Anda.');
-        });
+            alert('Terima kasih! Survey akan dikirim via email. Mohon lampirkan file gambar/blueprint pada email yang terbuka (jika ada).');
+        }
     </script>
 </body>
 </html>
