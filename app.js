@@ -64,6 +64,10 @@ function setupEventListeners() {
 // -- FUNGSI UTAMA -- //
 
 function handleSelection(e) {
+    // Di iOS, biarkan link rel="ar" menerima tap asli pengguna. Ini diperlukan
+    // agar Safari dapat membuka AR Quick Look dan kamera secara langsung.
+    if (isIOS && this.closest('a[rel="ar"]')) return;
+
     e.preventDefault();
     
     const selectedModel = this.getAttribute('data-model');
