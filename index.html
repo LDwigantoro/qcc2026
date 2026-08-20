@@ -9,13 +9,14 @@
             (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
         const isAndroid = /Android/i.test(navigator.userAgent);
         
-        if (isIOS) {
-            window.location.href = 'index-ios.html';
-        } else if (isAndroid) {
-            window.location.href = 'index-android.html';
-        } else {
-            window.location.href = 'index-desktop.html';
-        }
+        const targetPage = isIOS
+            ? 'index-ios.html'
+            : isAndroid
+                ? 'index-android.html'
+                : 'index-desktop.html';
+
+        // Survey harus diselesaikan sebelum pengguna membuka tampilan AR/3D.
+        window.location.replace(`survey-tower.html?target=${encodeURIComponent(targetPage)}`);
     </script>
 </head>
 <body>
