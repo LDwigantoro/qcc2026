@@ -457,9 +457,14 @@
             const recipients = 'andini.atma@tower-bersama.com,ali.gunawan@tower-bersama.com';
             const mailtoLink = `mailto:${recipients}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(emailBody)}`;
             
-            window.location.href = mailtoLink;
-            
-            alert('Terima kasih! Survey akan dikirim via email. Mohon lampirkan empat foto lahan pada email yang terbuka.');
+            // Chrome Android lebih konsisten membuka aplikasi email melalui elemen tautan
+            // yang dipicu langsung oleh interaksi pengguna.
+            const emailLink = document.createElement('a');
+            emailLink.href = mailtoLink;
+            emailLink.style.display = 'none';
+            document.body.appendChild(emailLink);
+            emailLink.click();
+            emailLink.remove();
         }
     </script>
 </body>
