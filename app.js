@@ -20,6 +20,22 @@ const modelUrls = {
 };
 
 let currentModelUrl = modelUrls[currentModel].glb;
+const modelUnitScale = 0.01;
+let userModelScale = 1;
+let initialPinchDistance = null;
+let initialPinchScale = 1;
+
+const modelDimensions = {
+    length: 0,
+    width: 0,
+    height: 0,
+    volume: 0
+};
+const baseModelDimensions = {
+    length: 0,
+    width: 0,
+    height: 0
+};
 
 // -- INISIALISASI APLIKASI -- //
 document.addEventListener('DOMContentLoaded', init);
@@ -134,6 +150,7 @@ function initWebXR() {
     renderer.xr.enabled = true;
     
     document.getElementById('viewer-page').appendChild(renderer.domElement);
+    bindModelScaleGesture(renderer.domElement);
 
     const arButton = document.getElementById('ar-button');
     if(arButton) arButton.style.display = 'block';
@@ -179,6 +196,7 @@ function init3DFallback() {
     fallbackRenderer.setSize(window.innerWidth, window.innerHeight);
     fallbackRenderer.outputEncoding = THREE.sRGBEncoding; // PERBAIKAN: Sangat vital agar warna GLB akurat
     fallbackContainer.appendChild(fallbackRenderer.domElement);
+    bindModelScaleGesture(fallbackRenderer.domElement);
     
     // PERBAIKAN: Menambahkan lampu agar sisi kanan kiri terang
     const ambientLight = new THREE.AmbientLight(0xffffff, 0.7);
@@ -225,9 +243,13 @@ function loadModel() {
         loader.load(currentModelUrl, 
             gltf => {
                 console.log("Model berhasil dimuat:", currentModel);
+
+                userModelScale = 1;
+                gltf.scene.scale.setScalar(modelUnitScale);
                 
                 // Atur skala dan pusatkan posisi model
                 const box = new THREE.Box3().setFromObject(gltf.scene);
+                updateModelDimensions(box);
                 const center = box.getCenter(new THREE.Vector3());
                 gltf.scene.position.sub(center); 
                 
@@ -244,6 +266,72 @@ function loadModel() {
             }
         );
     });
+}
+
+function updateModelDimensions(box) {
+    const size = box.getSize(new THREE.Vector3());
+
+    baseModelDimensions.length = size.x;
+    baseModelDimensions.width = size.z;
+    baseModelDimensions.height = size.y;
+    updateDisplayedDimensions();
+}
+
+function updateDisplayedDimensions() {
+    modelDimensions.length = baseModelDimensions.length * userModelScale;
+    modelDimensions.width = baseModelDimensions.width * userModelScale;
+    modelDimensions.height = baseModelDimensions.height * userModelScale;
+    modelDimensions.volume = modelDimensions.length * modelDimensions.width * modelDimensions.height;
+
+    const dimensionsBox = document.getElementById('dimensions-box');
+    if (!dimensionsBox) return;
+
+    dimensionsBox.innerHTML = `
+        <div class="dimensions-title">Dimensi Retaining Wall</div>
+        <div class="dimension-row"><span>Panjang</span><strong>${formatDimension(modelDimensions.length)} m</strong></div>
+        <div class="dimension-row"><span>Lebar</span><strong>${formatDimension(modelDimensions.width)} m</strong></div>
+        <div class="dimension-row"><span>Tinggi</span><strong>${formatDimension(modelDimensions.height)} m</strong></div>
+        <div class="dimension-volume"><span>Volume (P x L x T)</span><strong>${formatDimension(modelDimensions.volume)} m³</strong></div>
+        <small>Perkiraan dari bounding box model 3D</small>
+    `;
+    dimensionsBox.classList.remove('d-none');
+}
+
+function bindModelScaleGesture(canvas) {
+    canvas.addEventListener('touchstart', event => {
+        if (event.touches.length !== 2) return;
+
+        initialPinchDistance = getTouchDistance(event.touches);
+        initialPinchScale = userModelScale;
+    }, { passive: false });
+
+    canvas.addEventListener('touchmove', event => {
+        if (event.touches.length !== 2 || !model || !initialPinchDistance) return;
+
+        event.preventDefault();
+        const pinchDistance = getTouchDistance(event.touches);
+        userModelScale = THREE.MathUtils.clamp(
+            initialPinchScale * (pinchDistance / initialPinchDistance),
+            0.25,
+            4
+        );
+        model.scale.setScalar(modelUnitScale * userModelScale);
+        updateDisplayedDimensions();
+    }, { passive: false });
+
+    canvas.addEventListener('touchend', event => {
+        if (event.touches.length < 2) initialPinchDistance = null;
+    }, { passive: false });
+}
+
+function getTouchDistance(touches) {
+    const horizontalDistance = touches[0].clientX - touches[1].clientX;
+    const verticalDistance = touches[0].clientY - touches[1].clientY;
+    return Math.hypot(horizontalDistance, verticalDistance);
+}
+
+function formatDimension(value) {
+    return value.toFixed(2).replace('.', ',');
 }
 
 function onSelect() {
@@ -330,6 +418,9 @@ function cleanupRenderers() {
     if (fallbackScene) fallbackScene = null;
     if (fallbackCamera) fallbackCamera = null;
     if (model) model = null;
+
+    const dimensionsBox = document.getElementById('dimensions-box');
+    if (dimensionsBox) dimensionsBox.classList.add('d-none');
 }
 
 function debounce(func, wait) {
