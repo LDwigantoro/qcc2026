@@ -89,6 +89,10 @@ body {
     transform: translateZ(0);
 }
 
+#ios-ar-button {
+    bottom: 54px;
+}
+
 /* Info Box */
 #info-box {
     backdrop-filter: blur(5px);

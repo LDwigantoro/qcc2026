@@ -72,6 +72,11 @@ function setupEventListeners() {
     if (quicklookBack) {
         quicklookBack.addEventListener('click', showMainMenu);
     }
+
+    const iosArButton = document.getElementById('ios-ar-button');
+    if (iosArButton) {
+        iosArButton.addEventListener('click', openIosQuickLook);
+    }
     
     // Resize window dengan debounce
     window.addEventListener('resize', debounce(onWindowResize, 150));
@@ -80,10 +85,6 @@ function setupEventListeners() {
 // -- FUNGSI UTAMA -- //
 
 function handleSelection(e) {
-    // Di iOS, biarkan link rel="ar" menerima tap asli pengguna. Ini diperlukan
-    // agar Safari dapat membuka AR Quick Look dan kamera secara langsung.
-    if (isIOS && this.closest('a[rel="ar"]')) return;
-
     e.preventDefault();
     
     const selectedModel = this.getAttribute('data-model');
@@ -112,19 +113,21 @@ function loadModelViewer() {
     document.getElementById('main-menu').classList.add('d-none');
     document.getElementById('viewer-page').classList.remove('d-none');
 
-    // iOS menggunakan AR Quick Look jika WebXR tidak didukung
     if (isIOS) {
-        const arQuickLookPage = document.getElementById('ar-quicklook');
-        const modelLink = arQuickLookPage.querySelector(`a[href*="${currentModel}"]`);
-        if (modelLink) {
-            modelLink.click();
-        }
-        init3DFallback(); 
+        init3DFallback();
+        const iosArButton = document.getElementById('ios-ar-button');
+        if (iosArButton) iosArButton.classList.remove('d-none');
     } else if (isARSupported) {
         initWebXR();
     } else {
         init3DFallback(); // Desktop akan masuk ke sini
     }
+}
+
+function openIosQuickLook() {
+    const arQuickLookPage = document.getElementById('ar-quicklook');
+    const modelLink = arQuickLookPage && arQuickLookPage.querySelector(`a[href*="${currentModel}"]`);
+    if (modelLink) modelLink.click();
 }
 
 async function checkARSupport() {
@@ -389,6 +392,9 @@ function showMainMenu() {
     }
     
     cleanupRenderers();
+
+    const iosArButton = document.getElementById('ios-ar-button');
+    if (iosArButton) iosArButton.classList.add('d-none');
 }
 
 function cleanupRenderers() {
